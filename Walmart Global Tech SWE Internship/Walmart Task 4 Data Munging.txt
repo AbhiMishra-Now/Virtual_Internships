@@ -1,0 +1,44 @@
+#To populate the SQLite database with the data from the provided spreadsheets
+
+
+import sqlite3
+import pandas as pd
+
+# Connect to the SQLite database
+conn = sqlite3.connect('shipping_data.db')
+cursor = conn.cursor()
+
+# Read and insert data from Spreadsheet 0
+spreadsheet_0_data = pd.read_excel('Shipping_Spreadsheet_0.xlsx')
+
+# Insert Spreadsheet 0 data into the database
+spreadsheet_0_data.to_sql('spreadsheet_0', conn, if_exists='replace', index=False)
+
+# Read and insert data from Spreadsheet 2
+spreadsheet_2_data = pd.read_excel('Shipping_Spreadsheet_2.xlsx')
+
+# Insert Spreadsheet 2 data into the database
+spreadsheet_2_data.to_sql('spreadsheet_2', conn, if_exists='replace', index=False)
+
+# Read and insert data from Spreadsheet 1
+spreadsheet_1_data = pd.read_excel('Shipping_Spreadsheet_1.xlsx')
+
+# Iterate over each row in Spreadsheet 1
+for index, row in spreadsheet_1_data.iterrows():
+    shipping_identifier = row['Shipping Identifier']
+    product_name = row['Product']
+    quantity = row['Quantity']
+    
+    # Find the origin and destination for the shipping identifier in Spreadsheet 2
+    query = f"SELECT Origin, Destination FROM spreadsheet_2 WHERE ShippingIdentifier = '{shipping_identifier}'"
+    cursor.execute(query)
+    origin, destination = cursor.fetchone()
+    
+    # Insert a new row into the database for each product in the shipment
+    for _ in range(quantity):
+        insert_query = f"INSERT INTO spreadsheet_1 (ShippingIdentifier, Product, Origin, Destination) VALUES (?, ?, ?, ?)"
+        cursor.execute(insert_query, (shipping_identifier, product_name, origin, destination))
+
+# Commit the changes and close the database connection
+conn.commit()
+conn.close()
